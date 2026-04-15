@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from 'dotenv';
+import postRoute from "./Routes/postRoute.js"
+import categoryRoute from "./Routes/categoryRoute.js"
+import userRoute from "./Routes/userRoute.js"
 
 dotenv.config();
 
@@ -12,7 +15,10 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect(process.env.Mongo_url)
+mongoose.connect(process.env.Mongo_url, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log(err));
 
@@ -20,6 +26,10 @@ mongoose.connect(process.env.Mongo_url)
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
+
+app.use("/api/user", userRoute)
+app.use("/api/posts", postRoute)
+app.use("/api/categories", categoryRoute)
 
 const PORT = 5000;
 app.listen(PORT, () => {
