@@ -1,63 +1,90 @@
-import Post from "../models/post.js"
-import express from "express"
-import CryptoJS from "crypto-js"
+import post from "../models/post.js";
+import Post from "../models/post.js";
+import express from "express";
 
-const Route = express.Router()
+const Route = express.Router();
 
-//create
-Route.post("/create", async (req,res)=>{
-const post = new Post({
-    ...req.body
-})
-try {
-    const savedPost = await post.save()
-    res.status(201).json(savedPost)
-} catch (error) {
-    res.status(200).json(error)
-}
-})
-
-//get all posts
-Route.get("/posts", async (req,res)=>{
-    try {
-        const posts = await Post.find().sort({ createdAt: -1 })
-        res.status(200).json(posts)
-    } catch (error) {
-        res.status(400).json(error)
-    }
-})
-
-//get post by title
-Route.get("/post/:slug", async (req, res) => {
+// CREATE
+Route.post("/create", async (req, res) => {
   try {
-    const post = await Post.findOne({ slug: req.params.slug });
+    const post = new Post({
+      ...req.body,
+    });
 
-    if (!post) {
-      return res.status(404).json("Post not found");
+    const savedPost = await post.save();
+    res.status(201).json(savedPost);
+  } catch (error) {
+    res.status(500).json(error); 
+  }
+});
+
+Route.get("/posts", async (req, res) => {
+  try {
+    const cat = req.query.category;
+
+    let posts;
+
+    if (cat) {
+      posts = await Post.find({
+        categories: { $in: [cat] },
+      }).sort({ createdAt: -1 });
+    } else {
+      posts = await Post.find().sort({ createdAt: -1 });
     }
 
-    res.status(200).json(post);
+    res.status(200).json(posts);
   } catch (error) {
     res.status(500).json(error);
   }
 });
 
-//Edit post
-Route.put("/:id",async (req,res)=>{
-    try {
-        const editedPost = await Post.findByIdAndUpdate(req.params.id, {$set:req.body}, { new: true })
-        res.status(202).json(editedPost)
-    } catch (error) {
-        res.status(402).json(error)
-    }
-})
+// GET SINGLE POST BY SLUG
+Route.get("/post/:slug", async (req, res) => {
+  try {
+    const post = await Post.findOne({ slug: req.params.slug });
 
-// delete Post by id
-Route.delete("/:id", async (req,res)=>{
-    try {
-        await Post.findByIdAndDelete(req.params.id)
-        res.status(203).json("Post deleted successfully")
-    } catch (error) {
-        res.status(403).json(error)
+    if (!post) {
+      return res.status(404).json("Post not found"); 
     }
-})
+
+    res.status(200).json(post);
+  } catch (error) {
+    res.status(500).json(error); 
+  }
+});
+
+// UPDATE POST
+Route.put("/:id", async (req, res) => {
+  try {
+    const editedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (!editedPost) {
+      return res.status(404).json("Post not found"); 
+    }
+
+    res.status(200).json(editedPost); 
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+// DELETE POST
+Route.delete("/:id", async (req, res) => {
+  try {
+    const deletedPost = await Post.findByIdAndDelete(req.params.id);
+
+    if (!deletedPost) {
+      return res.status(404).json("Post not found"); 
+    }
+
+    res.status(200).json("Post deleted successfully"); 
+  } catch (error) {
+    res.status(500).json(error); 
+  }
+});
+
+export default Route;
