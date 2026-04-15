@@ -10,6 +10,11 @@ const PostSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+      slug: {
+  type: String,
+  required: true,
+  unique: true
+},
 
     content: [
       {
@@ -23,6 +28,7 @@ const PostSchema = new mongoose.Schema(
       },
     ],
   },
+
   {
     timestamps: true,
   }
