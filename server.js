@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import postRoute from "./Routes/postRoute.js"
 import categoryRoute from "./Routes/categoryRoute.js"
 import userRoute from "./Routes/userRoute.js"
+import subscribersRoute from "./Routes/subscribersRoute.js"
+
 
 dotenv.config();
 
@@ -15,10 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect(process.env.Mongo_url, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.Mongo_url, )
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log(err));
 
@@ -30,8 +29,9 @@ app.get("/", (req, res) => {
 app.use("/api/user", userRoute)
 app.use("/api/posts", postRoute)
 app.use("/api/categories", categoryRoute)
+app.use("/api/subscribers", subscribersRoute)
 
-const PORT = 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on port ${process.env.PORT}`);
 });

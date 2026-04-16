@@ -1,22 +1,62 @@
-import post from "../models/post.js";
 import Post from "../models/post.js";
 import express from "express";
+import { sendEmail } from "../utils/mail.js";
+import Subscriber from ".././models/subscribers.js";
+
+
+
 
 const Route = express.Router();
+//create post
+import slugify from "slugify";
 
-// CREATE
 Route.post("/create", async (req, res) => {
   try {
+    const { title } = req.body;
+
+    // 1. Generate base slug
+    const baseSlug = slugify(title, {
+      lower: true,
+      strict: true,
+    });
+
+    // 2. Ensure uniqueness
+    let slug = baseSlug;
+    let count = 1;
+
+    while (await Post.findOne({ slug })) {
+      slug = `${baseSlug}-${count}`;
+      count++;
+    }
+
+    // 3. Create post with generated slug
     const post = new Post({
       ...req.body,
+      slug,
     });
 
     const savedPost = await post.save();
+
+    // 4. Send emails to subscribers
+    const subscribers = await Subscriber.find();
+
+    await Promise.all(
+      subscribers.map((sub) =>
+        sendEmail({
+          to: sub.email,
+          subject: `New Post: ${savedPost.title}`,
+          html: `<h1>${savedPost.title}</h1><p>${savedPost.desc}</p>`,
+        })
+      )
+    );
+
     res.status(201).json(savedPost);
   } catch (error) {
-    res.status(500).json(error); 
+    res.status(500).json(error);
   }
 });
+
+//get all posts
 
 Route.get("/posts", async (req, res) => {
   try {
