@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/user", userRoute)
-app.use("/api/posts", postRoute)
+app.use("/api/post", postRoute)
 app.use("/api/categories", categoryRoute)
 app.use("/api/subscribers", subscribersRoute)
 

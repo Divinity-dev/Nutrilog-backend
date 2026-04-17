@@ -29,6 +29,14 @@ if (!email || !emailRegex.test(email)) {
   }
 });
 
+Route.get("/subscribers", async (req,res)=>{
+  try {
+    const subs = await Subscriber.find()
+    res.status(200).json(subs)
+  } catch (error) {
+    res.status(400).json(error)
+  }
+})
 
 
 export default Route;
