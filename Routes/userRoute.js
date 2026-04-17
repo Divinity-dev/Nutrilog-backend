@@ -5,7 +5,7 @@ import CryptoJS from "crypto-js";
 const Route = express.Router();
 
 // CREATE USER
-Route.post("/create", async (req, res) => {
+Route.post("/register", async (req, res) => {
   try {
     const user = new User({
       userName: req.body.userName,

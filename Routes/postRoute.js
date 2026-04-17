@@ -39,16 +39,39 @@ Route.post("/create", async (req, res) => {
 
     // 4. Send emails to subscribers
     const subscribers = await Subscriber.find();
+     
+   const postUrl = `https://yourdomain.com/post/${savedPost.slug}`;
 
-    await Promise.all(
-      subscribers.map((sub) =>
-        sendEmail({
-          to: sub.email,
-          subject: `New Post: ${savedPost.title}`,
-          html: `<h1>${savedPost.title}</h1><p>${savedPost.desc}</p>`,
-        })
-      )
-    );
+await Promise.all(
+  subscribers.map((sub) =>
+    sendEmail({
+      to: sub.email,
+      subject: `🆕 New Post: ${savedPost.title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
+          <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:10px;">
+            
+            <h1 style="color:#111;">${savedPost.title}</h1>
+
+            <p style="color:#555;">
+              A new article is now available on NutriBlog.
+            </p>
+
+            <a href="${postUrl}" 
+               style="display:inline-block; padding:12px 18px; background:#16a34a; color:#fff; text-decoration:none; border-radius:6px;">
+               Read Full Post
+            </a>
+
+            <p style="margin-top:20px; font-size:12px; color:#888;">
+              Thanks for subscribing 🙌
+            </p>
+
+          </div>
+        </div>
+      `,
+    })
+  )
+);
 
     res.status(201).json(savedPost);
   } catch (error) {
