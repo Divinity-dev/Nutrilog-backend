@@ -19,15 +19,9 @@ Route.post("/create", async (req, res) => {
       lower: true,
       strict: true,
     });
-
+const randomId = Math.floor(1000 + Math.random() * 9000);
     // 2. Ensure uniqueness
-    let slug = baseSlug;
-    let count = 1;
-
-    while (await Post.findOne({ slug })) {
-      slug = `${baseSlug}-${count}`;
-      count++;
-    }
+   const slug = `${baseSlug}-${randomId}`;
 
     // 3. Create post with generated slug
     const post = new Post({
