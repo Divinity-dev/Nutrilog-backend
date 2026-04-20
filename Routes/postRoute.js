@@ -102,7 +102,7 @@ Route.get("/posts", async (req, res) => {
 });
 
 // GET SINGLE POST BY SLUG
-Route.get("/post/:slug", async (req, res) => {
+Route.get("/:slug", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
 
@@ -117,19 +117,19 @@ Route.get("/post/:slug", async (req, res) => {
 });
 
 // UPDATE POST
-Route.put("/:id", async (req, res) => {
+Route.put("/:slug", async (req, res) => {
   try {
-    const editedPost = await Post.findByIdAndUpdate(
-      req.params.id,
+    const editedPost = await Post.findOneAndUpdate(
+      { slug: req.params.slug },
       { $set: req.body },
       { new: true }
     );
 
     if (!editedPost) {
-      return res.status(404).json("Post not found"); 
+      return res.status(404).json("Post not found");
     }
 
-    res.status(200).json(editedPost); 
+    res.status(200).json(editedPost);
   } catch (error) {
     res.status(500).json(error);
   }

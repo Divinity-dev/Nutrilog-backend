@@ -1,10 +1,10 @@
-import express from "express";
+import express, { Router } from "express";
 import Category from "../models/category.js";
 
 const Route = express.Router();
 
 // CREATE CATEGORY
-Route.post("/category/create", async (req, res) => {
+Route.post("/create", async (req, res) => {
   try {
     
     const existingCategory = await Category.findOne({
@@ -24,5 +24,15 @@ Route.post("/category/create", async (req, res) => {
     res.status(500).json(error); 
   }
 });
+
+// get all categories
+Route.get("/categories", async (req, res)=>{
+  try {
+    const cat = await Category.find()
+    res.status(200).json(cat)
+  } catch (error) {
+    res.status(400).json(error)
+  }
+})
 
 export default Route;
