@@ -25,16 +25,13 @@ app.use("/api/post", postRoute);
 app.use("/api/category", categoryRoute);
 app.use("/api/subscribers", subscribersRoute);
 
-// Start server before bd connect DB connects
+// Start server AFTER DB connects
 const startServer = async () => {
+  await connectDB();
+
   app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
-  });
-
-  connectDB().catch(err => {
-    console.error("DB connection failed:", err);
   });
 };
 
 startServer();
-
