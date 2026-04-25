@@ -40,7 +40,7 @@ Route.post("/create", async (req, res) => {
     // 4. Send emails to subscribers
     const subscribers = await Subscriber.find();
      
- const postUrl = `https://nutribloghub.com/post/${savedPost.slug}`;
+ const postUrl = `https://www.nutribloghub.com/post/${savedPost.slug}`;
 
 await Promise.all(
   subscribers.map((sub) =>
