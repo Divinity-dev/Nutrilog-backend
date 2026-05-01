@@ -1,7 +1,7 @@
 import Post from "../models/post.js";
 import express from "express";
 import { sendEmail } from "../utils/mail.js";
-import Subscriber from ".././models/subscribers.js";
+import Subscriber from "../models/subscribers.js";
 
 
 

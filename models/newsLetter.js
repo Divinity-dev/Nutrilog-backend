@@ -12,3 +12,12 @@ export const transporter = nodemailer.createTransport({
     pass: process.env.PASSWORD?.trim(),
   },
 });
+
+// Verify transporter connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("Transporter verification failed:", error);
+  } else {
+    console.log("Transporter is ready to send emails");
+  }
+});
