@@ -5,19 +5,13 @@ import nodemailer from "nodemailer";
 
 export const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // IMPORTANT (fixes Render + network issues)
   auth: {
     user: process.env.EMAIL?.trim(),
     pass: process.env.PASSWORD?.trim(),
   },
-});
-
-// Verify transporter connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.log("Transporter verification failed:", error);
-  } else {
-    console.log("Transporter is ready to send emails");
+  tls: {
+    rejectUnauthorized: false
   }
 });
