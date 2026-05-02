@@ -37,41 +37,52 @@ Route.post("/create", async (req, res) => {
 
     const savedPost = await post.save();
 
-    // 4. Send emails to subscribers
-    const subscribers = await Subscriber.find();
-     
- const postUrl = `https://www.nutribloghub.com/post/${savedPost.slug}`;
+   // 4. Send emails to subscribers (FIRE AND FORGET SAFE)
+const subscribers = await Subscriber.find();
+const postUrl = `https://www.nutribloghub.com/blog/${savedPost.slug}`;
 
-await Promise.all(
-  subscribers.map((sub) =>
-    sendEmail({
-      to: sub.email,
-      subject: `🆕 New Post: ${savedPost.title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-          <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:10px;">
-            
-            <h1 style="color:#111;">${savedPost.title}</h1>
+setImmediate(async () => {
+  try {
+    const results = await Promise.allSettled(
+      subscribers.map((sub) =>
+        sendEmail({
+          to: sub.email,
+          subject: `🆕 New Post: ${savedPost.title}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
+              <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:10px;">
+                
+                <h1 style="color:#111;">${savedPost.title}</h1>
 
-            <p style="color:#555;">
-              A new article is now available on NutriBlog.
-            </p>
+                <p style="color:#555;">
+                  A new article is now available on NutriBlog.
+                </p>
 
-            <a href="${postUrl}" 
-               style="display:inline-block; padding:12px 18px; background:#16a34a; color:#fff; text-decoration:none; border-radius:6px;">
-               Read Full Post
-            </a>
+                <a href="${postUrl}" 
+                   style="display:inline-block; padding:12px 18px; background:#16a34a; color:#fff; text-decoration:none; border-radius:6px;">
+                   Read Full Post
+                </a>
 
-            <p style="margin-top:20px; font-size:12px; color:#888;">
-              Thanks for subscribing 🙌
-            </p>
+                <p style="margin-top:20px; font-size:12px; color:#888;">
+                  Thanks for subscribing 🙌
+                </p>
 
-          </div>
-        </div>
-      `,
-    })
-  )
-);
+              </div>
+            </div>
+          `,
+        })
+      )
+    );
+
+    const failed = results.filter(r => r.status === "rejected");
+
+    if (failed.length > 0) {
+      console.error(`Email failures: ${failed.length}`);
+    }
+  } catch (err) {
+    console.error("Email worker crashed:", err);
+  }
+});
 
     res.status(201).json(savedPost);
   } catch (error) {
