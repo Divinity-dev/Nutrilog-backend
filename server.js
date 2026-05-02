@@ -6,6 +6,7 @@ import categoryRoute from "./Routes/categoryRoute.js";
 import userRoute from "./Routes/userRoute.js";
 import subscribersRoute from "./Routes/subscribersRoute.js";
 import connectDB from "./db.js";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -21,11 +22,41 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.json());
 
 // Routes
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
+});
+
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.PASSWORD,
+  },
+});
+app.get("/test-email-live", async (req, res) => {
+  try {
+    console.log("TEST ROUTE HIT");
+
+    console.log("EMAIL:", process.env.EMAIL);
+    console.log("PASSWORD LENGTH:", process.env.PASSWORD?.length);
+
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: process.env.EMAIL,
+      subject: "Render Live Test",
+      text: "If you see this, production email works",
+    });
+
+    console.log("EMAIL SENT:", info.response);
+
+    res.send("Email sent successfully");
+  } catch (err) {
+    console.log("EMAIL ERROR:", err);
+    res.status(500).send("Email failed");
+  }
 });
 
 app.use("/api/user", userRoute);
