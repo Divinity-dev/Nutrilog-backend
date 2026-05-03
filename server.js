@@ -29,33 +29,26 @@ app.get("/", (req, res) => {
 });
 
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD,
-  },
-});
-app.get("/test-email-live", async (req, res) => {
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.EMAIL,
+//     pass: process.env.PASSWORD,
+//   },
+// });
+import { sendEmail } from "./utils/mail.js"; // adjust path if needed
+
+app.get("/test-email", async (req, res) => {
   try {
-    console.log("TEST ROUTE HIT");
-
-    console.log("EMAIL:", process.env.EMAIL);
-    console.log("PASSWORD LENGTH:", process.env.PASSWORD?.length);
-
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: process.env.EMAIL,
-      subject: "Render Live Test",
-      text: "If you see this, production email works",
+    const response = await sendEmail({
+      to: "divine_asiriuwa@yahoo.com", // 👈 put your real email here
+      subject: "Test Email from NutriBlogHub",
+      html: "<h1>It works 🎉</h1><p>Your email system is working.</p>",
     });
 
-    console.log("EMAIL SENT:", info.response);
-
-    res.send("Email sent successfully");
-  } catch (err) {
-    console.log("EMAIL ERROR:", err);
-    res.status(500).send("Email failed");
+    res.json({ success: true, response });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
