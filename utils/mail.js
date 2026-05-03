@@ -1,19 +1,23 @@
-import { transporter } from "../models/newsLetter.js"
+import dotenv from "dotenv";
+dotenv.config(); // ✅ LOAD ENV FIRST
 
+import { Resend } from "resend";
 
-export const sendEmail = async ({ to, subject, text, html }) => {
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export const sendEmail = async ({ to, subject, html }) => {
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL,
+    const response = await resend.emails.send({
+      from: "NutriBlogHub <onboarding@resend.dev>",
       to,
       subject,
-      text,
       html,
     });
-    console.log("Email sent successfully to:", to);
-    return info;
+
+    console.log("Email sent:", response);
+    return response;
   } catch (error) {
-    console.error("Email sending failed:", error);
-    throw error; // Re-throw to let caller handle
+    console.error("Email error:", error);
+    throw error;
   }
 };
