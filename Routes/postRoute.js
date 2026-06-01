@@ -43,9 +43,9 @@ const postUrl = `https://www.nutribloghub.com/blog/${savedPost.slug}`;
 
 setImmediate(async () => {
   try {
-    const results = await Promise.allSettled(
-      subscribers.map((sub) =>
-        sendEmail({
+    for (const sub of subscribers) {
+      try {
+        await sendEmail({
           to: sub.email,
           subject: `🆕 New Post: ${savedPost.title}`,
           html: `
@@ -70,14 +70,10 @@ setImmediate(async () => {
               </div>
             </div>
           `,
-        })
-      )
-    );
-
-    const failed = results.filter(r => r.status === "rejected");
-
-    if (failed.length > 0) {
-      console.error(`Email failures: ${failed.length}`);
+        });
+      } catch (err) {
+        console.error(`Failed to send email to ${sub.email}:`, err);
+      }
     }
   } catch (err) {
     console.error("Email worker crashed:", err);
