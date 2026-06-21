@@ -43,38 +43,43 @@ const postUrl = `https://www.nutribloghub.com/blog/${savedPost.slug}`;
 
 setImmediate(async () => {
   try {
-    for (const sub of subscribers) {
-      try {
-        await sendEmail({
-          to: sub.email,
-          subject: `🆕 New Post: ${savedPost.title}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
-              <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:10px;">
-                
-                <h1 style="color:#111;">${savedPost.title}</h1>
+    const sendPromises = subscribers.map((sub) =>
+      sendEmail({
+        to: sub.email,
+        subject: `🆕 New Post: ${savedPost.title}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; background:#f9f9f9; padding:20px;">
+            <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:10px;">
+              
+              <h1 style="color:#111;">${savedPost.title}</h1>
 
-                <p style="color:#555;">
-                  A new article is now available on NutriBlog.
-                </p>
+              <p style="color:#555;">
+                A new article is now available on NutriBlog.
+              </p>
 
-                <a href="${postUrl}" 
-                   style="display:inline-block; padding:12px 18px; background:#16a34a; color:#fff; text-decoration:none; border-radius:6px;">
-                   Read Full Post
-                </a>
+              <a href="${postUrl}" 
+                 style="display:inline-block; padding:12px 18px; background:#16a34a; color:#fff; text-decoration:none; border-radius:6px;">
+                 Read Full Post
+              </a>
 
-                <p style="margin-top:20px; font-size:12px; color:#888;">
-                  Thanks for subscribing 🙌
-                </p>
+              <p style="margin-top:20px; font-size:12px; color:#888;">
+                Thanks for subscribing 🙌
+              </p>
 
-              </div>
             </div>
-          `,
-        });
-      } catch (err) {
-        console.error(`Failed to send email to ${sub.email}:`, err);
+          </div>
+        `,
+      })
+    );
+
+    const results = await Promise.allSettled(sendPromises);
+
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        console.error("Failed email:", subscribers[i].email, result.reason);
       }
-    }
+    });
+
   } catch (err) {
     console.error("Email worker crashed:", err);
   }
