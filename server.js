@@ -16,7 +16,8 @@ const app = express();
 app.use(cors({
   origin: [
     "https://www.nutribloghub.com",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "http://192.168.26.209:3000"
   ],
   credentials: true
 }));
