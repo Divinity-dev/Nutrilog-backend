@@ -5,6 +5,7 @@ import postRoute from "./Routes/postRoute.js";
 import categoryRoute from "./Routes/categoryRoute.js";
 import userRoute from "./Routes/userRoute.js";
 import subscribersRoute from "./Routes/subscribersRoute.js";
+import connectDB from "./db.js";
 
 dotenv.config();
 
@@ -34,6 +35,16 @@ app.use(cors({
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+
+// Connect lazily for each invocation; db.js reuses the connection across warm instances.
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDB();
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
 
 app.get("/", (_req, res) => {
   res.status(200).json({ message: "NutriBlogHub API is running", status: "ok" });
