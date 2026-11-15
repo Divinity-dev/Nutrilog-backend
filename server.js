@@ -6,7 +6,6 @@ import categoryRoute from "./Routes/categoryRoute.js";
 import userRoute from "./Routes/userRoute.js";
 import subscribersRoute from "./Routes/subscribersRoute.js";
 import connectDB from "./db.js";
-import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -24,7 +23,6 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: "2mb" }));
-app.use(cookieParser());
 
 // Routes
 app.get("/", (req, res) => {
