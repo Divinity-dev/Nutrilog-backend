@@ -79,7 +79,7 @@ Route.post("/register", async (req, res) => {
     const userName = String(req.body.userName || "").trim();
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
-    if (!userName || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 8) {
+    if (!userName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) {
       return res.status(400).json({ message: "Username, a valid email, and a password of at least 8 characters are required." });
     }
     if (!process.env.JWT_SECRET) return res.status(500).json({ message: "Authentication is not configured on the server." });
@@ -120,11 +120,11 @@ Route.post("/forgot-password", async (req, res) => {
 
   try {
     const email = String(req.body.email || "").trim().toLowerCase();
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !process.env.JWT_SECRET) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !process.env.JWT_SECRET) {
       return res.status(200).json(genericResponse);
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+resetPasswordRequestedAt");
     if (!user) return res.status(200).json(genericResponse);
 
     const now = Date.now();
@@ -166,7 +166,7 @@ Route.post("/reset-password", async (req, res) => {
     const code = String(req.body.code || "").trim();
     const password = String(req.body.password || "");
 
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || !/^\\d{6}$/.test(code)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code)) {
       return res.status(400).json({ message: "Enter a valid email address and the 6-digit code." });
     }
     if (password.length < 8) {
@@ -181,7 +181,7 @@ Route.post("/reset-password", async (req, res) => {
       resetPasswordExpires: { $gt: new Date() },
       resetPasswordAttempts: { $lt: MAX_RESET_ATTEMPTS },
       resetPasswordCodeHash: { $exists: true },
-    });
+    }).select("+resetPasswordCodeHash +resetPasswordExpires +resetPasswordAttempts");
 
     if (!user) {
       return res.status(400).json({ message: "The code is invalid or has expired. Please request a new code." });
