@@ -141,12 +141,14 @@ Route.post("/forgot-password", async (req, res) => {
 
     try {
       await sendEmail({
+        from: process.env.SMTP_USER ? `NutriBlogHub <${process.env.SMTP_USER}>` : undefined,
         to: user.email,
         subject: "Your NutriBlogHub password reset code",
         text: `Your NutriBlogHub password reset code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`,
         html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;color:#222"><h2 style="color:#c2410c">Reset your NutriBlogHub password</h2><p>Use this one-time verification code to reset your password:</p><p style="font-size:30px;font-weight:700;letter-spacing:8px;color:#c2410c">${code}</p><p>This code expires in 10 minutes and can only be used once.</p><p>If you did not request a password reset, you can safely ignore this email.</p></div>`,
       });
-    } catch {
+    } catch (emailError) {
+      console.error("NutriBlogHub password reset email failed:", emailError?.message || "Unknown SMTP error");
       user.resetPasswordCodeHash = undefined;
       user.resetPasswordExpires = undefined;
       user.resetPasswordRequestedAt = undefined;
@@ -155,7 +157,8 @@ Route.post("/forgot-password", async (req, res) => {
     }
 
     return res.status(200).json(genericResponse);
-  } catch {
+  } catch (error) {
+    console.error("NutriBlogHub forgot-password request failed:", error?.message || "Unknown error");
     return res.status(200).json(genericResponse);
   }
 });
