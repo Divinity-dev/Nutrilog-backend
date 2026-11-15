@@ -1,38 +1,29 @@
-import express, { Router } from "express";
+import express from "express";
 import Category from "../models/category.js";
+import { authenticate, requireAdmin } from "../middleware/auth.js";
 
 const Route = express.Router();
 
-// CREATE CATEGORY
-Route.post("/create", async (req, res) => {
+Route.post("/create", authenticate, requireAdmin, async (req, res) => {
   try {
-    
-    const existingCategory = await Category.findOne({
-      name: req.body.name,
-    });
-
-    if (existingCategory) {
-      return res.status(400).json("Category already exists");
-    }
-
-    const cat = new Category(req.body);
-
-    const savedCategory = await cat.save(); 
-
-    res.status(201).json(savedCategory); 
-  } catch (error) {
-    res.status(500).json(error); 
+    const name = String(req.body.name || "").trim();
+    if (!name) return res.status(400).json({ message: "Category name is required." });
+    const existingCategory = await Category.findOne({ name: { $regex: `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } });
+    if (existingCategory) return res.status(409).json({ message: "Category already exists." });
+    const savedCategory = await Category.create({ name });
+    return res.status(201).json(savedCategory);
+  } catch {
+    return res.status(500).json({ message: "Unable to create category." });
   }
 });
 
-// get all categories
-Route.get("/categories", async (req, res)=>{
+Route.get("/categories", async (_req, res) => {
   try {
-    const cat = await Category.find()
-    res.status(200).json(cat)
-  } catch (error) {
-    res.status(400).json(error)
+    const categories = await Category.find().sort({ name: 1 });
+    return res.status(200).json(categories);
+  } catch {
+    return res.status(500).json({ message: "Unable to retrieve categories." });
   }
-})
+});
 
 export default Route;
