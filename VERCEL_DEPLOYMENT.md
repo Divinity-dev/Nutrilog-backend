@@ -20,7 +20,12 @@ Add these in Vercel → Project → Settings → Environment Variables. Add them
 - `ADMIN_EMAIL`: `divine_asiriuwa@yahoo.com`.
 - `ADMIN_BOOTSTRAP_SECRET`: a separate, long, random, one-time secret for initial administrator setup.
 - `FRONTEND_URL`: `https://www.nutribloghub.com,https://nutribloghub.com`.
-- `RESEND_API_KEY`: currently required by the existing email utility when email delivery is invoked. The mail utility has not yet been switched to Gmail/Nodemailer.
+- `SMTP_HOST=smtp.gmail.com`.
+- `SMTP_PORT=465`.
+- `SMTP_SECURE=true`.
+- `SMTP_USER=asiriuwadivine@gmail.com`.
+- `SMTP_PASS`: a Google App Password for that Gmail account (not your normal Gmail password).
+- `MAIL_FROM`: for example, `NutriBlogHub <asiriuwadivine@gmail.com>`, or a verified sender address you control.
 
 If the MongoDB provider uses IP access restrictions, configure access for Vercel according to that provider's current networking options. Do not use a local development database address.
 
@@ -60,5 +65,5 @@ Do not send the bootstrap secret or other environment secrets in chat.
 
 - The MongoDB connection is cached on the warm Node.js instance and reused.
 - The app does not call `app.listen()` when Vercel imports it.
-- Newsletter email sends are deliberately not launched with `setImmediate()` after an HTTP response; serverless background work needs a durable queue or Vercel-supported background execution. The existing email utility and Gmail/Nodemailer migration are a separate remaining task.
+- Newsletter email sends are deliberately not launched with `setImmediate()` after an HTTP response; serverless background work needs a durable queue or Vercel-supported background execution. Email delivery uses Nodemailer with Gmail SMTP settings supplied through environment variables. Newsletter delivery is not launched as detached background work from article creation.
 - Express static file serving is not used. If static assets are needed, place them under `public/` for Vercel's CDN.
