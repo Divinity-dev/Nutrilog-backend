@@ -29,11 +29,11 @@ const getTransporter = () => {
   return transporter;
 };
 
-export const sendEmail = async ({ to, subject, html, text }) => {
+export const sendEmail = async ({ to, subject, html, text, from: senderOverride }) => {
   if (!to || !subject || (!html && !text)) {
     throw new Error("Email recipient, subject, and message content are required.");
   }
 
-  const from = process.env.MAIL_FROM || `NutriBlogHub <${process.env.SMTP_USER || "no-reply@nutribloghub.com"}>`;
+  const from = senderOverride || process.env.MAIL_FROM || `NutriBlogHub <${process.env.SMTP_USER || "no-reply@nutribloghub.com"}>`;
   return getTransporter().sendMail({ from, to, subject, html, text });
 };
