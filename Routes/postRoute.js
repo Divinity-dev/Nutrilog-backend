@@ -1,7 +1,5 @@
 import Post from "../models/post.js";
 import express from "express";
-import { sendEmail } from "../utils/mail.js";
-import Subscriber from "../models/subscribers.js";
 import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 
@@ -19,19 +17,7 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
     const post = new Post({ ...req.body, slug });
     const savedPost = await post.save();
 
-    // Newsletter delivery is intentionally left for the dedicated email/queue phase.
-    const subscribers = await Subscriber.find({ status: { $ne: "unsubscribed" } }).select("email");
-    const postUrl = `https://www.nutribloghub.com/blog/${savedPost.slug}`;
-    setImmediate(async () => {
-      const results = await Promise.allSettled(subscribers.map((sub) => sendEmail({
-        to: sub.email,
-        subject: `New Post: ${savedPost.title}`,
-        html: `<p>A new article is available on NutriBlogHub.</p><p><a href="${postUrl}">Read the article</a></p>`,
-      })));
-      results.forEach((result) => {
-        if (result.status === "rejected") console.error("Newsletter delivery failed:", result.reason);
-      });
-    });
+    // Subscriber notifications are handled separately by a durable email workflow.
 
     return res.status(201).json(savedPost);
   } catch {
