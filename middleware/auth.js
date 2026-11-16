@@ -33,6 +33,16 @@ export const authenticate = (req, res, next) => {
   }
 };
 
+export const optionalAuthenticate = (req, _res, next) => {
+  try {
+    const token = readCookie(req.headers.cookie, "nutriblog_session");
+    if (token) req.user = verifyToken(token);
+  } catch {
+    req.user = null;
+  }
+  return next();
+};
+
 export const requireAdmin = (req, res, next) => {
   if (req.user?.role !== "admin") return res.status(403).json({ message: "Administrator access required" });
   return next();
