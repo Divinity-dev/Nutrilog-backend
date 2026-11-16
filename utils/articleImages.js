@@ -6,7 +6,7 @@ export const getReusablePostImage = async ({ categories = [], excludeImage = "" 
 
   const baseFilter = {
     image: { $exists: true, $nin: excluded },
-    status: { $in: ["published", "draft"] },
+    $or: [{ status: "published" }, { status: { $exists: false } }],
   };
 
   let candidates = [];
