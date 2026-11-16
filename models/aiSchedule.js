@@ -10,6 +10,6 @@ const AiScheduleSchema = new mongoose.Schema({
   timezone: { type: String, default: "Africa/Lagos" },
   autoPublish: { type: Boolean, default: false },
   lastRunAt: { type: Date, default: null },
-}, { timestamps: true, _id: false });
+}, { timestamps: true });
 
 export default mongoose.model("AiSchedule", AiScheduleSchema);
