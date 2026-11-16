@@ -162,6 +162,7 @@ Route.get("/schedule", authenticate, requireAdmin, async (_req, res) => {
       topicInstructions: "",
       frequency: "daily",
       dayOfWeek: 1,
+      daysOfWeek: [2, 5],
       autoPublish: false,
       scheduleTime: "09:00",
       timezone: "Africa/Lagos",
@@ -174,9 +175,11 @@ Route.get("/schedule", authenticate, requireAdmin, async (_req, res) => {
 Route.put("/schedule", authenticate, requireAdmin, async (req, res) => {
   try {
     const topicInstructions = String(req.body.topicInstructions || "").trim().slice(0, 1200);
-    const frequency = req.body.frequency === "weekly" ? "weekly" : "daily";
+    const frequency = ["daily", "weekly", "twiceWeekly", "threeTimesWeekly"].includes(req.body.frequency) ? req.body.frequency : "daily";
     const requestedDay = Number(req.body.dayOfWeek);
     const dayOfWeek = Number.isInteger(requestedDay) && requestedDay >= 0 && requestedDay <= 6 ? requestedDay : 1;
+    const requestedDays = Array.isArray(req.body.daysOfWeek) ? req.body.daysOfWeek.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6) : [];
+    const daysOfWeek = [...new Set(requestedDays)].sort((a, b) => a - b);
     const scheduleTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(req.body.scheduleTime) ? req.body.scheduleTime : "09:00";
     const settings = await AiSchedule.findByIdAndUpdate("nutriblog-ai-schedule", {
       $set: {
@@ -184,6 +187,7 @@ Route.put("/schedule", authenticate, requireAdmin, async (req, res) => {
         topicInstructions,
         frequency,
         dayOfWeek,
+        daysOfWeek: daysOfWeek.length ? daysOfWeek : (frequency === "twiceWeekly" ? [2, 5] : [dayOfWeek]),
         autoPublish: Boolean(req.body.autoPublish),
         scheduleTime,
         timezone: "Africa/Lagos",
@@ -215,7 +219,12 @@ Route.get("/cron", async (req, res) => {
       ({ Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 })[new Intl.DateTimeFormat("en-US", { timeZone: "Africa/Lagos", weekday: "short" }).format(now)]);
     const localTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
     if (localTime < settings.scheduleTime) return res.status(200).json({ message: "Scheduled time has not arrived.", skipped: true });
-    if (settings.frequency === "weekly" && localWeekday !== settings.dayOfWeek) return res.status(200).json({ message: "Not the configured publishing day.", skipped: true });
+    const scheduledDays = Array.isArray(settings.daysOfWeek) && settings.daysOfWeek.length
+      ? settings.daysOfWeek
+      : [settings.dayOfWeek ?? 1];
+    if (settings.frequency !== "daily" && !scheduledDays.includes(localWeekday)) {
+      return res.status(200).json({ message: "Not a configured publishing day.", skipped: true });
+    }
     if (settings.lastRunAt) {
       const lastDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos", year: "numeric", month: "2-digit", day: "2-digit" }).format(settings.lastRunAt);
       if (lastDate === localDate) return res.status(200).json({ message: "Already ran today.", skipped: true });
