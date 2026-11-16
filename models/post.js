@@ -22,6 +22,7 @@ const PostSchema = new mongoose.Schema(
       header: { type: String, maxlength: 180 },
       text: { type: String, required: true },
     }],
+    likeVisitors: { type: [String], default: [], select: false },
     status: { type: String, enum: ["draft", "published"], default: "published", index: true },
     seoTitle: { type: String, maxlength: 180, default: "" },
     seoDescription: { type: String, maxlength: 320, default: "" },
