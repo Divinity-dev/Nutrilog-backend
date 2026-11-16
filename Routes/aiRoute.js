@@ -5,6 +5,7 @@ import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { sendEmail } from "../utils/mail.js";
 import { notifySubscribersOfPost } from "../utils/subscriberNotifications.js";
+import { getReusablePostImage } from "../utils/articleImages.js";
 
 const Route = express.Router();
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -244,16 +245,18 @@ Route.get("/cron", async (req, res) => {
     let featuredPhoto = null;
     if (process.env.PEXELS_API_KEY) {
       try {
-        const photos = await findPexelsPhotos(`${article.title} healthy food nutrition`);
+        const photos = await findPexelsPhotos(article.title + " healthy food nutrition");
         featuredPhoto = photos[0] || null;
       } catch {
-        // Image search is optional; scheduled article creation should still succeed.
+        // Image search is optional; article creation must continue.
       }
     }
+    const reusedImage = featuredPhoto ? null : await getReusablePostImage();
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
-      image: featuredPhoto?.image || process.env.DEFAULT_ARTICLE_IMAGE_URL || "/images/nutriblog-default.svg",
+      image: featuredPhoto?.image || reusedImage || "",
+      imageSource: featuredPhoto ? "pexels" : reusedImage ? "reused" : "none",
       imageCredit: featuredPhoto ? {
         provider: "Pexels",
         photographer: featuredPhoto.photographer,
