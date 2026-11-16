@@ -10,6 +10,11 @@ const PostSchema = new mongoose.Schema(
       photographerUrl: { type: String, default: "" },
       photoUrl: { type: String, default: "" },
     },
+    imageSource: {
+      type: String,
+      enum: ["manual", "pexels", "ai", "reused", "default"],
+      default: "manual",
+    },
     slug: { type: String, required: true, unique: true },
     desc: { type: String, default: "", maxlength: 400 },
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
