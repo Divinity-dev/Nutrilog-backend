@@ -8,6 +8,9 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => (
 
 export const notifySubscribersOfPost = async (post) => {
   if (!post?._id || !post?.title || post.status !== "published") return { sent: 0, failed: 0 };
+  if (process.env.VERCEL_ENV === "preview" && process.env.SUBSCRIBER_NOTIFICATIONS_ENABLED !== "true") {
+    return { sent: 0, failed: 0, skipped: "Preview email delivery is disabled." };
+  }
   const subscribers = await Subscriber.find({
     $or: [{ status: "active" }, { status: { $exists: false } }],
   }).select("_id email").lean();
