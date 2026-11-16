@@ -4,9 +4,16 @@ export const getReusablePostImage = async ({ categories = [], excludeImage = "" 
   const excluded = ["/images/nutriblog-default.svg", ""];
   if (excludeImage) excluded.push(excludeImage);
 
+  const publishedFilter = { $or: [{ status: "published" }, { status: { $exists: false } }] };
+  const latestPost = await Post.findOne({
+    ...publishedFilter,
+    image: { $exists: true, $nin: excluded },
+  }).sort({ createdAt: -1 }).select("image").lean();
+  if (latestPost?.image) excluded.push(latestPost.image);
+
   const baseFilter = {
     image: { $exists: true, $nin: excluded },
-    $or: [{ status: "published" }, { status: { $exists: false } }],
+    ...publishedFilter,
   };
 
   let candidates = [];
