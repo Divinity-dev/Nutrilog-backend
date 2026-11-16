@@ -21,6 +21,7 @@ const allowedOrigins = new Set([
   "http://localhost:3000",
   "http://192.168.26.209:3000",
   ...(process.env.FRONTEND_URL || "").split(",").map((origin) => origin.trim()).filter(Boolean),
+  ...(process.env.FRONTEND_PREVIEW_URL || "").split(",").map((origin) => origin.trim()).filter(Boolean),
 ]);
 
 app.use(cors({
