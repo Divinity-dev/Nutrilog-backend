@@ -23,7 +23,7 @@ export const notifySubscribersOfPost = async (post) => {
     const results = await Promise.allSettled(batch.map(async (subscriber) => {
       const token = createHmac("sha256", process.env.JWT_SECRET)
         .update(`${subscriber._id}:${subscriber.email}:unsubscribe`).digest("hex");
-      const unsubscribeUrl = `${origin}/unsubscribe/${subscriber._id}?token=${token}`;
+      const unsubscribeUrl = `${origin}/unsubscribe?id=${subscriber._id}&token=${token}`;
       await sendEmail({
         to: subscriber.email,
         subject: `New on NutriBlogHub: ${post.title}`,
