@@ -333,14 +333,14 @@ Route.get("/cron", async (req, res) => {
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
-      image: generatedImage || featuredPhoto?.image || reusedImage || "",
+      image: generatedImage || featuredPhoto?.image || reusedImage?.image || "",
       imageSource: generatedImage ? "ai" : featuredPhoto ? "pexels" : reusedImage ? "reused" : "none",
       imageCredit: featuredPhoto ? {
         provider: "Pexels",
         photographer: featuredPhoto.photographer,
         photographerUrl: featuredPhoto.photographerUrl,
         photoUrl: featuredPhoto.photoUrl,
-      } : undefined,
+      } : reusedImage?.imageCredit || undefined,
       status: settings.autoPublish ? "published" : "draft",
       generatedByAI: true,
     });
