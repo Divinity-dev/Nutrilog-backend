@@ -18,8 +18,9 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
     const payload = { ...req.body, slug };
     if (!String(payload.image || "").trim()) {
       const reusedImage = await getReusablePostImage({ categories: payload.categories || [] });
-      payload.image = reusedImage || "";
+      payload.image = reusedImage?.image || "";
       payload.imageSource = reusedImage ? "reused" : "none";
+      if (reusedImage?.imageCredit) payload.imageCredit = reusedImage.imageCredit;
     } else {
       payload.imageSource = payload.imageSource || "manual";
     }
