@@ -26,6 +26,11 @@ Add these in Vercel → Project → Settings → Environment Variables. Add them
 - `SMTP_USER=asiriuwadivine@gmail.com`.
 - `SMTP_PASS`: a Google App Password for that Gmail account (not your normal Gmail password).
 - `MAIL_FROM`: for example, `NutriBlogHub <asiriuwadivine@gmail.com>`, or a verified sender address you control.
+- `GEMINI_API_KEY`: required for AI article generation and scheduled article creation.
+- `CRON_SECRET`: required by the scheduled `/api/ai/cron` endpoint. Vercel supplies it as a Bearer token to the configured cron route.
+- `PEXELS_API_KEY`: optional; used for stock-photo search and as a scheduled image fallback.
+- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`: optional; enable FLUX.1 schnell AI image generation through Cloudflare Workers AI. Create the Cloudflare-provided Workers AI API token (or a custom token with Workers AI Read permission). The Free plan includes 10,000 Neurons per day at no charge; requests stop when the free daily allocation is exhausted. Workers Paid usage above the free allocation is $0.011 per 1,000 Neurons.
+- `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET`: optional overrides for storing generated images. The current frontend upload settings (`dwivnxusa` and `blog_upload`) are used by default.
 
 If the MongoDB provider uses IP access restrictions, configure access for Vercel according to that provider's current networking options. Do not use a local development database address.
 
@@ -60,6 +65,12 @@ Do not send the bootstrap secret or other environment secrets in chat.
 - `POST /api/user/login` sets the HttpOnly session cookie.
 - `GET /api/user/me` succeeds with that cookie.
 - Article create/update/delete and subscriber-list endpoints reject unauthenticated or non-admin requests.
+
+## Scheduled AI publishing and image fallback
+
+The repository `vercel.json` runs `/api/ai/cron` daily at 08:05 UTC (09:05 in `Africa/Lagos`). The MongoDB AI schedule determines whether that day is selected and whether the generated article is saved as a draft or published. Image selection order is Cloudflare FLUX AI (when configured), Pexels (when configured), then a random image from an earlier published article. The most recently used image is avoided when other suitable images exist, and existing image attribution is preserved. If the library is empty, the configured default article image is used.
+
+The manual article editor also exposes an AI image-generation action. It requires the Cloudflare variables above; if they are absent, article creation remains available and the previous-image fallback is used when the article is saved.
 
 ## Serverless notes
 

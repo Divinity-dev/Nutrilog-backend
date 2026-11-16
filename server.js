@@ -5,6 +5,8 @@ import postRoute from "./Routes/postRoute.js";
 import categoryRoute from "./Routes/categoryRoute.js";
 import userRoute from "./Routes/userRoute.js";
 import subscribersRoute from "./Routes/subscribersRoute.js";
+import commentRoute from "./Routes/commentRoute.js";
+import aiRoute from "./Routes/aiRoute.js";
 import connectDB from "./db.js";
 
 dotenv.config();
@@ -19,11 +21,11 @@ const allowedOrigins = new Set([
   "http://localhost:3000",
   "http://192.168.26.209:3000",
   ...(process.env.FRONTEND_URL || "").split(",").map((origin) => origin.trim()).filter(Boolean),
+  ...(process.env.FRONTEND_PREVIEW_URL || "").split(",").map((origin) => origin.trim()).filter(Boolean),
 ]);
 
 app.use(cors({
   origin(origin, callback) {
-    // Requests without an Origin header include server-to-server and health checks.
     if (!origin || allowedOrigins.has(origin)) return callback(null, true);
     return callback(new Error("Origin not allowed by CORS"));
   },
@@ -36,7 +38,6 @@ app.use(cors({
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
-// Connect lazily for each invocation; db.js reuses the connection across warm instances.
 app.use(async (_req, _res, next) => {
   try {
     await connectDB();
@@ -58,13 +59,14 @@ app.use("/api/user", userRoute);
 app.use("/api/post", postRoute);
 app.use("/api/category", categoryRoute);
 app.use("/api/subscribers", subscribersRoute);
+app.use("/api/comments", commentRoute);
+app.use("/api/ai", aiRoute);
 
 app.use((req, res) => {
   res.status(404).json({ message: "API route not found", path: req.path });
 });
 
 app.use((error, _req, res, _next) => {
-  // Avoid leaking stack traces or configuration details to clients.
   if (error.message === "Origin not allowed by CORS") {
     return res.status(403).json({ message: "This website is not allowed to access the API." });
   }
