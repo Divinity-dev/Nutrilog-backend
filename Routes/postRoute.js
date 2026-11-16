@@ -88,7 +88,7 @@ Route.get("/admin/:slug", authenticate, requireAdmin, async (req, res) => {
 
 Route.get("/:id/likes", async (req, res) => {
   try {
-    if (!/^[a-f\\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
+    if (!/^[a-f\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
     const visitorId = String(req.query.visitorId || "");
     const post = await Post.findOne({
       _id: req.params.id,
@@ -106,7 +106,7 @@ Route.get("/:id/likes", async (req, res) => {
 
 Route.post("/:id/like", async (req, res) => {
   try {
-    if (!/^[a-f\\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
+    if (!/^[a-f\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
     const visitorId = String(req.body.visitorId || "");
     if (!/^[a-zA-Z0-9-]{16,80}$/.test(visitorId)) {
       return res.status(400).json({ message: "A valid visitor ID is required." });
