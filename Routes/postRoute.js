@@ -85,6 +85,55 @@ Route.get("/admin/:slug", authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+
+Route.get("/:id/likes", async (req, res) => {
+  try {
+    if (!/^[a-f\\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
+    const visitorId = String(req.query.visitorId || "");
+    const post = await Post.findOne({
+      _id: req.params.id,
+      $or: [{ status: "published" }, { status: { $exists: false } }],
+    }).select("+likeVisitors");
+    if (!post) return res.status(404).json({ message: "Article not found." });
+    return res.status(200).json({
+      likesCount: post.likeVisitors.length,
+      liked: visitorId ? post.likeVisitors.includes(visitorId) : false,
+    });
+  } catch {
+    return res.status(500).json({ message: "Unable to retrieve article likes." });
+  }
+});
+
+Route.post("/:id/like", async (req, res) => {
+  try {
+    if (!/^[a-f\\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid article ID." });
+    const visitorId = String(req.body.visitorId || "");
+    if (!/^[a-zA-Z0-9-]{16,80}$/.test(visitorId)) {
+      return res.status(400).json({ message: "A valid visitor ID is required." });
+    }
+    const post = await Post.findOne({
+      _id: req.params.id,
+      $or: [{ status: "published" }, { status: { $exists: false } }],
+    }).select("+likeVisitors");
+    if (!post) return res.status(404).json({ message: "Article not found." });
+
+    const alreadyLiked = post.likeVisitors.includes(visitorId);
+    if (alreadyLiked) {
+      post.likeVisitors.pull(visitorId);
+    } else {
+      post.likeVisitors.addToSet(visitorId);
+    }
+    await post.save();
+
+    return res.status(200).json({
+      likesCount: post.likeVisitors.length,
+      liked: !alreadyLiked,
+    });
+  } catch {
+    return res.status(500).json({ message: "Unable to update article like." });
+  }
+});
+
 Route.get("/:slug", async (req, res) => {
   try {
     const post = await Post.findOne({
