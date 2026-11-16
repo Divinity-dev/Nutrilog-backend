@@ -248,7 +248,12 @@ Route.put("/schedule", authenticate, requireAdmin, async (req, res) => {
     const requestedDay = Number(req.body.dayOfWeek);
     const dayOfWeek = Number.isInteger(requestedDay) && requestedDay >= 0 && requestedDay <= 6 ? requestedDay : 1;
     const requestedDays = Array.isArray(req.body.daysOfWeek) ? req.body.daysOfWeek.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6) : [];
-    const daysOfWeek = [...new Set(requestedDays)].sort((a, b) => a - b);
+    const uniqueDays = [...new Set(requestedDays)].sort((a, b) => a - b);
+    const requiredDayCount = frequency === "weekly" ? 1 : frequency === "twiceWeekly" ? 2 : frequency === "threeTimesWeekly" ? 3 : null;
+    const defaultDays = frequency === "weekly" ? [dayOfWeek] : frequency === "threeTimesWeekly" ? [1, 3, 5] : [2, 5];
+    const daysOfWeek = requiredDayCount
+      ? (uniqueDays.length ? uniqueDays.slice(0, requiredDayCount) : defaultDays)
+      : uniqueDays;
     const scheduleTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(req.body.scheduleTime) ? req.body.scheduleTime : "09:00";
     const settings = await AiSchedule.findByIdAndUpdate("nutriblog-ai-schedule", {
       $set: {
@@ -256,7 +261,7 @@ Route.put("/schedule", authenticate, requireAdmin, async (req, res) => {
         topicInstructions,
         frequency,
         dayOfWeek,
-        daysOfWeek: daysOfWeek.length ? daysOfWeek : (frequency === "twiceWeekly" ? [2, 5] : [dayOfWeek]),
+        daysOfWeek,
         autoPublish: Boolean(req.body.autoPublish),
         scheduleTime,
         timezone: "Africa/Lagos",
