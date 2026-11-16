@@ -13,7 +13,7 @@ const stripUnsafeHtml = (html) => String(html || "")
   .replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
   .replace(/javascript\s*:/gi, "");
 
-const createArticleWithAI = async ({ topic, audience = "general readers", tone = "friendly and practical", length = "medium", keywords = "" }) => {
+const createArticleWithAI = async ({ topic, audience = "general readers", tone = "friendly and practical", length = "medium", keywords = "", avoidTitles = [] }) => {
   if (!process.env.OPENAI_API_KEY) throw new Error("AI_NOT_CONFIGURED");
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -32,7 +32,7 @@ const createArticleWithAI = async ({ topic, audience = "general readers", tone =
         },
         {
           role: "user",
-          content: `Create a complete NutriBlogHub article about: ${topic}. Audience: ${audience}. Tone: ${tone}. Length: ${length}. SEO keywords to naturally consider: ${keywords || "relevant nutrition and healthy living search terms"}. Make it helpful for readers in Nigeria and internationally where relevant. Avoid keyword stuffing. Return only the requested JSON structure.`
+          content: `Create a complete NutriBlogHub article about: ${topic}. Audience: ${audience}. Tone: ${tone}. Length: ${length}. SEO keywords to naturally consider: ${keywords || "relevant nutrition and healthy living search terms"}. Make it helpful for readers in Nigeria and internationally where relevant. Avoid keyword stuffing. Do not repeat or closely imitate these recent article titles: ${avoidTitles.join(" | ") || "none supplied"}. Return only the requested JSON structure.`
         }
       ]
     }),
@@ -110,7 +110,8 @@ Route.put("/schedule", authenticate, requireAdmin, async (req, res) => {
   try {
     const topicInstructions = String(req.body.topicInstructions || "").trim().slice(0, 1200);
     const frequency = req.body.frequency === "weekly" ? "weekly" : "daily";
-    const dayOfWeek = Math.min(6, Math.max(0, Number(req.body.dayOfWeek) || 1));
+    const requestedDay = Number(req.body.dayOfWeek);
+    const dayOfWeek = Number.isInteger(requestedDay) && requestedDay >= 0 && requestedDay <= 6 ? requestedDay : 1;
     const scheduleTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(req.body.scheduleTime) ? req.body.scheduleTime : "09:00";
     const settings = await AiSchedule.findByIdAndUpdate("nutriblog-ai-schedule", {
       $set: {
@@ -158,7 +159,14 @@ Route.get("/cron", async (req, res) => {
     settings.lastRunAt = now;
     await settings.save();
 
-    const article = await createArticleWithAI({ topic: settings.topicInstructions, audience: "general readers", tone: "friendly, clear, practical and evidence-aware", length: "long" });
+    const recentPosts = await Post.find().sort({ createdAt: -1 }).limit(30).select("title").lean();
+    const article = await createArticleWithAI({
+      topic: `Choose one fresh, specific article topic from this editorial direction: ${settings.topicInstructions}`,
+      audience: "general readers",
+      tone: "friendly, clear, practical and evidence-aware",
+      length: "long",
+      avoidTitles: recentPosts.map((item) => item.title),
+    });
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
