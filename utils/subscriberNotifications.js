@@ -11,9 +11,9 @@ export const notifySubscribersOfPost = async (post) => {
   if (process.env.VERCEL_ENV === "preview" && process.env.SUBSCRIBER_NOTIFICATIONS_ENABLED !== "true") {
     return { sent: 0, failed: 0, skipped: "Preview email delivery is disabled." };
   }
-  const subscribers = await Subscriber.find({
-    $or: [{ status: "active" }, { status: { $exists: false } }],
-  }).select("_id email").lean();
+  // Only contacts with an explicit active status (set after confirmation) receive article alerts.
+  const subscribers = await Subscriber.find({ status: "active" })
+    .select("_id email").lean();
   let sent = 0;
   let failed = 0;
   const origin = (process.env.FRONTEND_URL || "https://www.nutribloghub.com").split(",")[0].trim().replace(/\/$/, "");
