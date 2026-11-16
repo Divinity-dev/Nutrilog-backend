@@ -6,15 +6,16 @@ import { authenticate, requireAdmin } from "../middleware/auth.js";
 
 const Route = express.Router();
 const recentSubmissions = new Map();
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_PATTERN = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
-const cleanText = (value, maxLength) => String(value || "").replace(/<[^>]*>/g, "").replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, maxLength);
+const cleanText = (value, maxLength) => String(value || "").replace(/<[^>]*>/g, "").replace(/[\\u0000-\\u001F\\u007F]/g, " ").trim().slice(0, maxLength);
 
 Route.get("/post/:slug", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug, $or: [{ status: "published" }, { status: { $exists: false } }] }).select("_id");
     if (!post) return res.status(404).json({ message: "Post not found." });
-    const comments = await Comment.find({ post: post._id, status: "approved" })
+    // Existing pending comments are also made visible under the new no-approval policy.
+    const comments = await Comment.find({ post: post._id })
       .select("name body createdAt")
       .sort({ createdAt: -1 })
       .limit(100)
@@ -45,21 +46,24 @@ Route.post("/post/:slug", async (req, res) => {
     recent.push(now);
     recentSubmissions.set(ip, recent);
 
-    await Comment.create({ post: post._id, name, email, body, status: "pending" });
-    return res.status(201).json({ message: "Thanks! Your comment has been submitted and will appear after moderation." });
+    const comment = await Comment.create({ post: post._id, name, email, body, status: "approved" });
+    return res.status(201).json({
+      message: "Your comment has been published.",
+      comment: { _id: comment._id, name: comment.name, body: comment.body, createdAt: comment.createdAt },
+    });
   } catch {
     return res.status(500).json({ message: "Unable to submit your comment." });
   }
 });
 
-Route.get("/admin", authenticate, requireAdmin, async (req, res) => {
+// Admin can review every comment and remove any inappropriate comment.
+Route.get("/admin", authenticate, requireAdmin, async (_req, res) => {
   try {
-    const status = ["pending", "approved", "rejected"].includes(req.query.status) ? req.query.status : "pending";
-    const comments = await Comment.find({ status })
+    const comments = await Comment.find({})
       .select("+email")
       .populate("post", "title slug")
       .sort({ createdAt: -1 })
-      .limit(200)
+      .limit(500)
       .lean();
     return res.status(200).json(comments.map(({ email, ...comment }) => ({ ...comment, email })));
   } catch {
@@ -67,21 +71,9 @@ Route.get("/admin", authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-Route.patch("/:id/moderate", authenticate, requireAdmin, async (req, res) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid comment ID." });
-    const status = String(req.body.status || "");
-    if (!["approved", "rejected", "pending"].includes(status)) return res.status(400).json({ message: "Invalid moderation status." });
-    const comment = await Comment.findByIdAndUpdate(req.params.id, { status, moderatedAt: new Date() }, { new: true }).select("-email");
-    if (!comment) return res.status(404).json({ message: "Comment not found." });
-    return res.status(200).json(comment);
-  } catch {
-    return res.status(500).json({ message: "Unable to update comment." });
-  }
-});
-
 Route.delete("/:id", authenticate, requireAdmin, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Invalid comment ID." });
     const comment = await Comment.findByIdAndDelete(req.params.id);
     if (!comment) return res.status(404).json({ message: "Comment not found." });
     return res.status(200).json({ message: "Comment deleted." });
