@@ -17,7 +17,7 @@ Route.post("/subscribe", async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address." });
     }
     let subscriber = await Subscriber.findOne({ email });
-    if (subscriber && (subscriber.status === "active" || !subscriber.status)) {
+    if (subscriber?.status === "active") {
       return res.status(200).json({ message: "You're already subscribed to new NutriBlogHub articles." });
     }
 
