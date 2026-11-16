@@ -34,7 +34,13 @@ Route.post("/subscribe", async (req, res) => {
       await subscriber.save();
     }
 
-    const confirmUrl = `${siteUrl}/confirm-subscription?token=${token}`;
+    const requestOrigin = String(req.headers.origin || "");
+    const allowedOrigins = [process.env.FRONTEND_URL, process.env.FRONTEND_PREVIEW_URL]
+      .flatMap((value) => String(value || "").split(","))
+      .map((value) => value.trim().replace(/\\/$/, ""))
+      .filter(Boolean);
+    const confirmationOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : siteUrl;
+    const confirmUrl = `${confirmationOrigin}/confirm-subscription?token=${token}`;
     await sendEmail({
       to: email,
       subject: "Confirm your NutriBlogHub subscription",
