@@ -9,7 +9,8 @@ export const getReusablePostImage = async ({ categories = [], excludeImage = "" 
     ...publishedFilter,
     image: { $exists: true, $nin: excluded },
   }).sort({ createdAt: -1 }).select("image").lean();
-  if (latestPost?.image) excluded.push(latestPost.image);
+  const latestImage = latestPost?.image || null;
+  if (latestImage) excluded.push(latestImage);
 
   const baseFilter = {
     image: { $exists: true, $nin: excluded },
@@ -30,6 +31,13 @@ export const getReusablePostImage = async ({ categories = [], excludeImage = "" 
       .limit(100)
       .select("image")
       .lean();
+  }
+
+  if (!candidates.length && latestImage) {
+    candidates = await Post.find({
+      ...publishedFilter,
+      image: { $exists: true, $nin: ["/images/nutriblog-default.svg", ""] },
+    }).sort({ createdAt: -1 }).limit(100).select("image").lean();
   }
 
   const uniqueImages = [...new Set(candidates.map((post) => post.image).filter(Boolean))];
