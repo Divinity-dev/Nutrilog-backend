@@ -9,9 +9,9 @@ const Route = express.Router();
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const stripUnsafeHtml = (html) => String(html || "")
-  .replace(/<\\s*(script|style|iframe|object|embed)[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>/gi, "")
-  .replace(/\\s+on\\w+\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)/gi, "")
-  .replace(/javascript\\s*:/gi, "");
+  .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+  .replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+  .replace(/javascript\s*:/gi, "");
 
 const createArticleWithAI = async ({ topic, audience = "general readers", tone = "friendly and practical", length = "medium", keywords = "", avoidTitles = [] }) => {
   if (!process.env.GEMINI_API_KEY) throw new Error("AI_NOT_CONFIGURED");
@@ -53,7 +53,14 @@ const createArticleWithAI = async ({ topic, audience = "general readers", tone =
 
   let article;
   try {
-    article = JSON.parse(raw.replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, ""));
+    let cleaned = raw.trim();
+    if (cleaned.startsWith(String.fromCharCode(96).repeat(3))) {
+      cleaned = cleaned.slice(cleaned.indexOf("\n") + 1);
+      if (cleaned.trimEnd().endsWith(String.fromCharCode(96).repeat(3))) {
+        cleaned = cleaned.trimEnd().slice(0, -3);
+      }
+    }
+    article = JSON.parse(cleaned.trim());
   } catch {
     throw new Error("Gemini returned an invalid article format. Please try again.");
   }
