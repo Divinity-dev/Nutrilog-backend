@@ -80,6 +80,33 @@ const createArticleWithAI = async ({ topic, audience = "general readers", tone =
   };
 };
 
+const findPexelsPhotos = async (query) => {
+  if (!process.env.PEXELS_API_KEY) return [];
+  const normalizedQuery = String(query || "healthy food nutrition").trim().slice(0, 120);
+  if (!normalizedQuery) return [];
+  const url = new URL("https://api.pexels.com/v1/search");
+  url.searchParams.set("query", normalizedQuery);
+  url.searchParams.set("orientation", "landscape");
+  url.searchParams.set("per_page", "8");
+  const response = await fetch(url, {
+    headers: { Authorization: process.env.PEXELS_API_KEY },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload?.error || "Pexels image search failed.");
+    error.status = response.status;
+    throw error;
+  }
+  return (Array.isArray(payload.photos) ? payload.photos : []).map((photo) => ({
+    id: photo.id,
+    image: photo.src?.large2x || photo.src?.large || photo.src?.landscape || "",
+    photographer: String(photo.photographer || "Pexels contributor").slice(0, 120),
+    photographerUrl: photo.photographer_url || "",
+    photoUrl: photo.url || "https://www.pexels.com/",
+    alt: String(photo.alt || normalizedQuery).slice(0, 240),
+  })).filter((photo) => /^https:\/\//i.test(photo.image) && /^https:\/\//i.test(photo.photoUrl));
+};
+
 const uniqueSlug = async (title) => {
   const base = slugify(title, { lower: true, strict: true }) || "ai-article";
   let slug = base;
@@ -103,6 +130,25 @@ Route.post("/generate", authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     if (error.message === "AI_NOT_CONFIGURED") return res.status(503).json({ message: "AI writing is not configured yet. Add GEMINI_API_KEY to the backend hosting environment." });
     return res.status(error.status && error.status < 500 ? error.status : 502).json({ message: error.message || "Unable to generate an article." });
+  }
+});
+
+Route.post("/featured-images", authenticate, requireAdmin, async (req, res) => {
+  try {
+    if (!process.env.PEXELS_API_KEY) {
+      return res.status(503).json({ message: "Pexels image search is not configured yet. Add PEXELS_API_KEY to the backend Preview environment." });
+    }
+    const query = String(req.body.query || "").trim().slice(0, 240);
+    if (query.length < 2) return res.status(400).json({ message: "Enter an article title or topic to search for images." });
+    const photos = await findPexelsPhotos(query);
+    return res.status(200).json({
+      photos,
+      attribution: "Photos provided by Pexels",
+    });
+  } catch (error) {
+    return res.status(error.status && error.status < 500 ? error.status : 502).json({
+      message: error.message || "Unable to search Pexels for images.",
+    });
   }
 });
 
@@ -185,9 +231,25 @@ Route.get("/cron", async (req, res) => {
       length: "long",
       avoidTitles: recentPosts.map((item) => item.title),
     });
+    let featuredPhoto = null;
+    if (process.env.PEXELS_API_KEY) {
+      try {
+        const photos = await findPexelsPhotos(`${article.title} healthy food nutrition`);
+        featuredPhoto = photos[0] || null;
+      } catch {
+        // Image search is optional; scheduled article creation should still succeed.
+      }
+    }
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
+      image: featuredPhoto?.image || "",
+      imageCredit: featuredPhoto ? {
+        provider: "Pexels",
+        photographer: featuredPhoto.photographer,
+        photographerUrl: featuredPhoto.photographerUrl,
+        photoUrl: featuredPhoto.photoUrl,
+      } : undefined,
       status: settings.autoPublish ? "published" : "draft",
       generatedByAI: true,
     });
