@@ -17,7 +17,14 @@ Route.post("/subscribe", async (req, res) => {
       return res.status(400).json({ message: "Please enter a valid email address." });
     }
     let subscriber = await Subscriber.findOne({ email });
-    if (subscriber?.status === "active") {
+    // Older subscribers were already opted in before explicit confirmation statuses were introduced.
+    // Preserve that existing subscription instead of forcing a second confirmation.
+    if (subscriber && (!subscriber.status || subscriber.status === "active")) {
+      if (!subscriber.status) {
+        subscriber.status = "active";
+        subscriber.confirmedAt = subscriber.confirmedAt || subscriber.createdAt || new Date();
+        await subscriber.save();
+      }
       return res.status(200).json({ message: "You're already subscribed to new NutriBlogHub articles." });
     }
 
@@ -97,14 +104,19 @@ Route.post("/unsubscribe/:id", async (req, res) => {
 Route.get("/subscribers", authenticate, requireAdmin, async (_req, res) => {
   try {
     const subscribers = await Subscriber.find().select("email status source createdAt confirmedAt unsubscribedAt").sort({ createdAt: -1 }).lean();
-    const normalized = subscribers.map((item) => ({ ...item, status: item.status || "review_required" }));
+    // Legacy records without a status predate double opt-in and represent existing subscribers.
+    const normalized = subscribers.map((item) => ({
+      ...item,
+      status: item.status || "active",
+      confirmedAt: item.confirmedAt || (!item.status ? item.createdAt : undefined),
+    }));
     return res.status(200).json({
       subscribers: normalized,
       total: normalized.length,
       activeCount: normalized.filter((item) => item.status === "active").length,
       pendingCount: normalized.filter((item) => item.status === "pending").length,
       unsubscribedCount: normalized.filter((item) => item.status === "unsubscribed").length,
-      reviewCount: normalized.filter((item) => item.status === "review_required").length,
+      reviewCount: 0,
     });
   } catch {
     return res.status(500).json({ message: "Unable to retrieve subscribers." });
