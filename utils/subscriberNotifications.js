@@ -11,8 +11,9 @@ export const notifySubscribersOfPost = async (post) => {
   if (process.env.VERCEL_ENV === "preview" && process.env.SUBSCRIBER_NOTIFICATIONS_ENABLED !== "true") {
     return { sent: 0, failed: 0, skipped: "Preview email delivery is disabled." };
   }
-  // Only contacts with an explicit active status (set after confirmation) receive article alerts.
-  const subscribers = await Subscriber.find({ status: "active" })
+  // Explicitly active subscribers and legacy records with no status are opted-in readers.
+  // Keep pending and unsubscribed records excluded.
+  const subscribers = await Subscriber.find({ $or: [{ status: "active" }, { status: { $exists: false } }, { status: null }] })
     .select("_id email").lean();
   let sent = 0;
   let failed = 0;
