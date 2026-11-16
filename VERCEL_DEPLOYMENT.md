@@ -28,7 +28,9 @@ Add these in Vercel → Project → Settings → Environment Variables. Add them
 - `MAIL_FROM`: for example, `NutriBlogHub <asiriuwadivine@gmail.com>`, or a verified sender address you control.
 - `GEMINI_API_KEY`: required for manual and scheduled AI article generation.
 - `CRON_SECRET`: required by the scheduled `/api/ai/cron` endpoint; Vercel sends it as a Bearer token to the configured cron route.
-- `PEXELS_API_KEY`: optional; when absent or unavailable, scheduled articles reuse a random image from earlier published articles. The previous image is avoided when other images are available.
+- `PEXELS_API_KEY`: optional; used as the second image source when Cloudflare AI is not configured or unavailable.
+- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`: optional; enable FLUX.1 schnell AI image generation through Cloudflare Workers AI. Create a token with Workers AI permission. The Cloudflare Free plan currently includes 10,000 Neurons per day; usage beyond the free allowance may require a paid plan.
+- `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET`: optional overrides for image storage. The existing frontend upload settings (`dwivnxusa` and `blog_upload`) are used by default.
 
 If the MongoDB provider uses IP access restrictions, configure access for Vercel according to that provider's current networking options. Do not use a local development database address.
 
@@ -66,7 +68,7 @@ Do not send the bootstrap secret or other environment secrets in chat.
 
 ## Scheduled AI publishing
 
-`vercel.json` runs `/api/ai/cron` daily at 08:05 UTC (09:05 in `Africa/Lagos`). The schedule document in MongoDB decides whether today is an enabled publishing day and whether the article is saved as a draft or published. Set `GEMINI_API_KEY` and `CRON_SECRET` in the Vercel Preview environment before testing. Pexels is optional; the image fallback reuses an image from an earlier published article. If no earlier article has an image, the article is still generated without a featured image.
+`vercel.json` runs `/api/ai/cron` daily at 08:05 UTC (09:05 in `Africa/Lagos`). The schedule document in MongoDB decides whether today is an enabled publishing day and whether the article is saved as a draft or published. Set `GEMINI_API_KEY` and `CRON_SECRET` in the Vercel Preview environment before testing. Cloudflare FLUX image generation is attempted first when its credentials are configured, then Pexels, then a random image from an earlier published article. The previous article image is avoided when alternatives exist. If no earlier article has an image, the article is still generated without a featured image.
 
 ## Serverless notes
 
