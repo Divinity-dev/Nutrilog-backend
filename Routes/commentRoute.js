@@ -15,7 +15,7 @@ Route.get("/post/:slug", async (req, res) => {
     const post = await Post.findOne({ slug: req.params.slug, $or: [{ status: "published" }, { status: { $exists: false } }] }).select("_id");
     if (!post) return res.status(404).json({ message: "Post not found." });
     // Existing pending comments are also made visible under the new no-approval policy.
-    const comments = await Comment.find({ post: post._id })
+    const comments = await Comment.find({ post: post._id, status: { $ne: "rejected" } })
       .select("name body createdAt")
       .sort({ createdAt: -1 })
       .limit(100)
