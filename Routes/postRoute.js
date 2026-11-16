@@ -1,7 +1,7 @@
 import Post from "../models/post.js";
 import express from "express";
 import slugify from "slugify";
-import { authenticate, requireAdmin } from "../middleware/auth.js";
+import { authenticate, optionalAuthenticate, requireAdmin } from "../middleware/auth.js";
 import { getReusablePostImage } from "../utils/articleImages.js";
 
 const Route = express.Router();
@@ -49,12 +49,13 @@ Route.get("/posts", async (req, res) => {
   }
 });
 
-Route.get("/:slug", async (req, res) => {
+Route.get("/:slug", optionalAuthenticate, async (req, res) => {
   try {
-    const post = await Post.findOne({
-      slug: req.params.slug,
-      $or: [{ status: "published" }, { status: { $exists: false } }],
-    });
+    const filter = { slug: req.params.slug };
+    if (req.user?.role !== "admin") {
+      filter.$or = [{ status: "published" }, { status: { $exists: false } }];
+    }
+    const post = await Post.findOne(filter);
     if (!post) return res.status(404).json({ message: "Post not found." });
     return res.status(200).json(post);
   } catch {
