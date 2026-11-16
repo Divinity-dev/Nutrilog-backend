@@ -26,6 +26,9 @@ Add these in Vercel → Project → Settings → Environment Variables. Add them
 - `SMTP_USER=asiriuwadivine@gmail.com`.
 - `SMTP_PASS`: a Google App Password for that Gmail account (not your normal Gmail password).
 - `MAIL_FROM`: for example, `NutriBlogHub <asiriuwadivine@gmail.com>`, or a verified sender address you control.
+- `GEMINI_API_KEY`: required for manual and scheduled AI article generation.
+- `CRON_SECRET`: required by the scheduled `/api/ai/cron` endpoint; Vercel sends it as a Bearer token to the configured cron route.
+- `PEXELS_API_KEY`: optional; when absent or unavailable, scheduled articles reuse a random image from earlier published articles. The previous image is avoided when other images are available.
 
 If the MongoDB provider uses IP access restrictions, configure access for Vercel according to that provider's current networking options. Do not use a local development database address.
 
@@ -60,6 +63,10 @@ Do not send the bootstrap secret or other environment secrets in chat.
 - `POST /api/user/login` sets the HttpOnly session cookie.
 - `GET /api/user/me` succeeds with that cookie.
 - Article create/update/delete and subscriber-list endpoints reject unauthenticated or non-admin requests.
+
+## Scheduled AI publishing
+
+`vercel.json` runs `/api/ai/cron` daily at 08:05 UTC (09:05 in `Africa/Lagos`). The schedule document in MongoDB decides whether today is an enabled publishing day and whether the article is saved as a draft or published. Set `GEMINI_API_KEY` and `CRON_SECRET` in the Vercel Preview environment before testing. Pexels is optional; the image fallback reuses an image from an earlier published article. If no earlier article has an image, the article is still generated without a featured image.
 
 ## Serverless notes
 
