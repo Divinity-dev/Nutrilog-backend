@@ -4,6 +4,7 @@ import AiSchedule from "../models/aiSchedule.js";
 import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { sendEmail } from "../utils/mail.js";
+import { notifySubscribersOfPost } from "../utils/subscriberNotifications.js";
 
 const Route = express.Router();
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -253,6 +254,10 @@ Route.get("/cron", async (req, res) => {
       status: settings.autoPublish ? "published" : "draft",
       generatedByAI: true,
     });
+
+    if (post.status === "published") {
+      notifySubscribersOfPost(post).catch((error) => console.error("Subscriber notification failed:", error.message));
+    }
 
     const notify = process.env.AI_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
     if (notify) {
