@@ -116,7 +116,7 @@ const generateCloudflareImage = async (prompt) => {
 
   const model = process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell";
   const response = await fetch(
-    "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + encodeURIComponent(model),
+    "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model,
     {
       method: "POST",
       headers: {
