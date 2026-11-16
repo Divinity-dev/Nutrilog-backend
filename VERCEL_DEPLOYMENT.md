@@ -29,7 +29,7 @@ Add these in Vercel → Project → Settings → Environment Variables. Add them
 - `GEMINI_API_KEY`: required for AI article generation and scheduled article creation.
 - `CRON_SECRET`: required by the scheduled `/api/ai/cron` endpoint. Vercel supplies it as a Bearer token to the configured cron route.
 - `PEXELS_API_KEY`: optional; used for stock-photo search and as a scheduled image fallback.
-- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`: optional; enable FLUX.1 schnell AI image generation through Cloudflare Workers AI. Create a Cloudflare API token with Workers AI permission. The Cloudflare Free plan includes a daily free Neurons allocation; usage beyond that allocation may require a paid plan.
+- `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`: optional; enable FLUX.1 schnell AI image generation through Cloudflare Workers AI. Create the Cloudflare-provided Workers AI API token (or a custom token with Workers AI Read permission). The Free plan includes 10,000 Neurons per day at no charge; requests stop when the free daily allocation is exhausted. Workers Paid usage above the free allocation is $0.011 per 1,000 Neurons.
 - `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET`: optional overrides for storing generated images. The current frontend upload settings (`dwivnxusa` and `blog_upload`) are used by default.
 
 If the MongoDB provider uses IP access restrictions, configure access for Vercel according to that provider's current networking options. Do not use a local development database address.
