@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const PostSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 180 },
-    image: { type: String, default: "" },
+    image: { type: String, default: process.env.DEFAULT_ARTICLE_IMAGE_URL || "/images/nutriblog-default.svg" },
     imageCredit: {
       provider: { type: String, default: "" },
       photographer: { type: String, default: "" },
