@@ -6,48 +6,59 @@ import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { sendEmail } from "../utils/mail.js";
 
 const Route = express.Router();
-const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const stripUnsafeHtml = (html) => String(html || "")
-  .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
-  .replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-  .replace(/javascript\s*:/gi, "");
+  .replace(/<\\s*(script|style|iframe|object|embed)[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>/gi, "")
+  .replace(/\\s+on\\w+\\s*=\\s*("[^"]*"|'[^']*'|[^\\s>]+)/gi, "")
+  .replace(/javascript\\s*:/gi, "");
 
 const createArticleWithAI = async ({ topic, audience = "general readers", tone = "friendly and practical", length = "medium", keywords = "", avoidTitles = [] }) => {
-  if (!process.env.OPENAI_API_KEY) throw new Error("AI_NOT_CONFIGURED");
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  if (!process.env.GEMINI_API_KEY) throw new Error("AI_NOT_CONFIGURED");
+
+  const systemInstruction = "You are the editorial writer for NutriBlogHub, a practical nutrition and healthy-living publication. Return valid JSON only with keys title, desc, seoTitle, seoDescription, tags (array of strings), and content (array of objects with header and text). Write original, useful, natural articles. For health topics, use cautious evidence-based language, never diagnose, never promise cures, and never invent studies, statistics, quotations, or sources. Do not recommend stopping prescribed treatment. Each section text must be simple HTML using only p, h3, ul, ol, li, strong, em, and a tags. Do not include scripts, styles, inline event handlers, or markdown fences. Include an introduction and a concise conclusion as sections. Create 6 to 9 substantial sections.";
+  const userPrompt = `Create a complete NutriBlogHub article about: ${topic}. Audience: ${audience}. Tone: ${tone}. Length: ${length}. SEO keywords to naturally consider: ${keywords || "relevant nutrition and healthy living search terms"}. Make it helpful for readers in Nigeria and internationally where relevant. Avoid keyword stuffing. Do not repeat or closely imitate these recent article titles: ${avoidTitles.join(" | ") || "none supplied"}. Return only the requested JSON structure.`;
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: DEFAULT_MODEL,
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: "You are the editorial writer for NutriBlogHub, a practical nutrition and healthy-living publication. Return valid JSON only with keys title, desc, seoTitle, seoDescription, tags (array of strings), and content (array of objects with header and text). Write original, useful, natural articles. For health topics, use cautious evidence-based language, never diagnose, never promise cures, and never invent studies, statistics, quotations, or sources. Do not recommend stopping prescribed treatment. Each section text must be simple HTML using only p, h3, ul, ol, li, strong, em, and a tags. Do not include scripts, styles, inline event handlers, or markdown fences. Include an introduction and a concise conclusion as sections. Create 6 to 9 substantial sections."
-        },
-        {
-          role: "user",
-          content: `Create a complete NutriBlogHub article about: ${topic}. Audience: ${audience}. Tone: ${tone}. Length: ${length}. SEO keywords to naturally consider: ${keywords || "relevant nutrition and healthy living search terms"}. Make it helpful for readers in Nigeria and internationally where relevant. Avoid keyword stuffing. Do not repeat or closely imitate these recent article titles: ${avoidTitles.join(" | ") || "none supplied"}. Return only the requested JSON structure.`
-        }
-      ]
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: "application/json",
+      },
     }),
   });
+
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(payload?.error?.message || "The AI writing service could not generate the article.");
+    const error = new Error(payload?.error?.message || "Gemini could not generate the article.");
     error.status = response.status;
     throw error;
   }
-  const raw = payload?.choices?.[0]?.message?.content;
-  if (!raw) throw new Error("The AI service returned an empty article.");
-  const article = JSON.parse(raw);
+
+  const raw = payload?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+  if (!raw) {
+    const reason = payload?.promptFeedback?.blockReason || payload?.candidates?.[0]?.finishReason;
+    throw new Error(reason ? `Gemini did not return an article (${reason}).` : "Gemini returned an empty article.");
+  }
+
+  let article;
+  try {
+    article = JSON.parse(raw.replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, ""));
+  } catch {
+    throw new Error("Gemini returned an invalid article format. Please try again.");
+  }
   if (!article.title || !Array.isArray(article.content) || !article.content.length) {
-    throw new Error("The AI service returned an incomplete article.");
+    throw new Error("Gemini returned an incomplete article.");
   }
   return {
     title: String(article.title).slice(0, 180),
@@ -83,7 +94,7 @@ Route.post("/generate", authenticate, requireAdmin, async (req, res) => {
     });
     return res.status(200).json(article);
   } catch (error) {
-    if (error.message === "AI_NOT_CONFIGURED") return res.status(503).json({ message: "AI writing is not configured yet. Add OPENAI_API_KEY to the backend hosting environment." });
+    if (error.message === "AI_NOT_CONFIGURED") return res.status(503).json({ message: "AI writing is not configured yet. Add GEMINI_API_KEY to the backend hosting environment." });
     return res.status(error.status && error.status < 500 ? error.status : 502).json({ message: error.message || "Unable to generate an article." });
   }
 });
