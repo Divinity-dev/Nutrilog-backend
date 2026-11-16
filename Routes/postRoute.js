@@ -3,6 +3,7 @@ import Comment from "../models/comment.js";
 import express from "express";
 import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
+import { notifySubscribersOfPost } from "../utils/subscriberNotifications.js";
 
 const Route = express.Router();
 
@@ -36,6 +37,9 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
       slug,
     });
     const savedPost = await post.save();
+    if (savedPost.status === "published") {
+      notifySubscribersOfPost(savedPost).catch((error) => console.error("Subscriber notification failed:", error.message));
+    }
     return res.status(201).json(savedPost);
   } catch {
     return res.status(500).json({ message: "Unable to create article." });
@@ -105,12 +109,16 @@ Route.put("/:slug", authenticate, requireAdmin, async (req, res) => {
       if (!current) return res.status(404).json({ message: "Post not found." });
       updates.slug = await makeUniqueSlug(updates.title, current._id);
     }
+    const previousPost = await Post.findOne({ slug: req.params.slug }).select("status");
     const editedPost = await Post.findOneAndUpdate(
       { slug: req.params.slug },
       { $set: updates },
       { new: true, runValidators: true }
     );
     if (!editedPost) return res.status(404).json({ message: "Post not found." });
+    if (previousPost?.status !== "published" && editedPost.status === "published") {
+      notifySubscribersOfPost(editedPost).catch((error) => console.error("Subscriber notification failed:", error.message));
+    }
     return res.status(200).json(editedPost);
   } catch {
     return res.status(500).json({ message: "Unable to update article." });
