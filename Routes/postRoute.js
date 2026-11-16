@@ -2,6 +2,7 @@ import Post from "../models/post.js";
 import express from "express";
 import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
+import { getReusablePostImage } from "../utils/articleImages.js";
 
 const Route = express.Router();
 
@@ -14,7 +15,15 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
     let count = 1;
     while (await Post.findOne({ slug })) slug = `${baseSlug}-${count++}`;
 
-    const post = new Post({ ...req.body, slug });
+    const payload = { ...req.body, slug };
+    if (!String(payload.image || "").trim()) {
+      const reusedImage = await getReusablePostImage({ categories: payload.categories || [] });
+      payload.image = reusedImage || "";
+      payload.imageSource = reusedImage ? "reused" : "none";
+    } else {
+      payload.imageSource = payload.imageSource || "manual";
+    }
+    const post = new Post(payload);
     const savedPost = await post.save();
 
     // Subscriber notifications are handled separately by a durable email workflow.
@@ -27,7 +36,12 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
 
 Route.get("/posts", async (req, res) => {
   try {
-    const filter = req.query.category ? { categories: { $in: [req.query.category] } } : {};
+    const filter = {
+      $and: [
+        { $or: [{ status: "published" }, { status: { $exists: false } }] },
+        ...(req.query.category ? [{ categories: { $in: [req.query.category] } }] : []),
+      ],
+    };
     const posts = await Post.find(filter).sort({ createdAt: -1 });
     return res.status(200).json(posts);
   } catch {
@@ -37,7 +51,10 @@ Route.get("/posts", async (req, res) => {
 
 Route.get("/:slug", async (req, res) => {
   try {
-    const post = await Post.findOne({ slug: req.params.slug });
+    const post = await Post.findOne({
+      slug: req.params.slug,
+      $or: [{ status: "published" }, { status: { $exists: false } }],
+    });
     if (!post) return res.status(404).json({ message: "Post not found." });
     return res.status(200).json(post);
   } catch {
