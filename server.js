@@ -5,6 +5,8 @@ import postRoute from "./Routes/postRoute.js";
 import categoryRoute from "./Routes/categoryRoute.js";
 import userRoute from "./Routes/userRoute.js";
 import subscribersRoute from "./Routes/subscribersRoute.js";
+import commentsRoute from "./Routes/commentsRoute.js";
+import aiRoute from "./Routes/aiRoute.js";
 import connectDB from "./db.js";
 
 dotenv.config();
@@ -58,6 +60,8 @@ app.use("/api/user", userRoute);
 app.use("/api/post", postRoute);
 app.use("/api/category", categoryRoute);
 app.use("/api/subscribers", subscribersRoute);
+app.use("/api/comments", commentsRoute);
+app.use("/api/ai", aiRoute);
 
 app.use((req, res) => {
   res.status(404).json({ message: "API route not found", path: req.path });
