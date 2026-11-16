@@ -4,6 +4,12 @@ const PostSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 180 },
     image: { type: String, default: "" },
+    imageCredit: {
+      provider: { type: String, default: "" },
+      photographer: { type: String, default: "" },
+      photographerUrl: { type: String, default: "" },
+      photoUrl: { type: String, default: "" },
+    },
     slug: { type: String, required: true, unique: true },
     desc: { type: String, default: "", maxlength: 400 },
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
