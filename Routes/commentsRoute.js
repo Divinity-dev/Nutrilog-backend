@@ -20,6 +20,7 @@ const publicComment = (comment, viewerKey) => ({
   _id: comment._id,
   authorName: comment.authorName,
   body: comment.body,
+  status: comment.status,
   createdAt: comment.createdAt,
   likes: comment.likeKeys?.length || 0,
   likedByMe: Boolean(viewerKey && comment.likeKeys?.includes(viewerKey)),
