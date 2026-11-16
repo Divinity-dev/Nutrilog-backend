@@ -5,6 +5,7 @@ import slugify from "slugify";
 import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { sendEmail } from "../utils/mail.js";
 import { notifySubscribersOfPost } from "../utils/subscriberNotifications.js";
+import { getReusablePostImage } from "../utils/articleImages.js";
 
 const Route = express.Router();
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -108,6 +109,55 @@ const findPexelsPhotos = async (query) => {
   })).filter((photo) => /^https:\/\//i.test(photo.image) && /^https:\/\//i.test(photo.photoUrl));
 };
 
+const generateCloudflareImage = async (prompt) => {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  if (!accountId || !apiToken) return null;
+
+  const model = process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell";
+  const response = await fetch(
+    "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + apiToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: String(prompt || "Healthy food and nutrition editorial photography").slice(0, 1800),
+        steps: 4,
+      }),
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  const imageBase64 = payload?.result?.image;
+  if (!response.ok || !imageBase64) {
+    throw new Error(payload?.errors?.[0]?.message || "Cloudflare AI image generation failed.");
+  }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "dwivnxusa";
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || "blog_upload";
+  const form = new FormData();
+  form.append(
+    "file",
+    new Blob([Buffer.from(imageBase64, "base64")], { type: "image/jpeg" }),
+    "nutriblog-ai-featured.jpg"
+  );
+  form.append("upload_preset", uploadPreset);
+  form.append("folder", "nutriblog/ai-generated");
+
+  const uploadResponse = await fetch(
+    "https://api.cloudinary.com/v1_1/" + cloudName + "/image/upload",
+    { method: "POST", body: form }
+  );
+  const uploadPayload = await uploadResponse.json().catch(() => ({}));
+  if (!uploadResponse.ok || !uploadPayload.secure_url) {
+    throw new Error(uploadPayload?.error?.message || "Unable to save the generated image.");
+  }
+  return uploadPayload.secure_url;
+};
+
 const uniqueSlug = async (title) => {
   const base = slugify(title, { lower: true, strict: true }) || "ai-article";
   let slug = base;
@@ -131,6 +181,25 @@ Route.post("/generate", authenticate, requireAdmin, async (req, res) => {
   } catch (error) {
     if (error.message === "AI_NOT_CONFIGURED") return res.status(503).json({ message: "AI writing is not configured yet. Add GEMINI_API_KEY to the backend hosting environment." });
     return res.status(error.status && error.status < 500 ? error.status : 502).json({ message: error.message || "Unable to generate an article." });
+  }
+});
+
+Route.post("/generate-image", authenticate, requireAdmin, async (req, res) => {
+  try {
+    if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+      return res.status(503).json({
+        message: "Free AI image generation is not configured yet. Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the backend hosting environment.",
+      });
+    }
+    const prompt = String(req.body.prompt || "").trim().slice(0, 1800);
+    if (prompt.length < 5) return res.status(400).json({ message: "Enter an article title or image description." });
+    const image = await generateCloudflareImage(
+      "Create a high-quality, realistic, editorial food and nutrition photograph for a health blog article titled: " + prompt +
+      ". Natural lighting, appetizing but realistic food, clean composition, no text, no logos, landscape framing."
+    );
+    return res.status(200).json({ image, imageSource: "ai" });
+  } catch (error) {
+    return res.status(502).json({ message: error.message || "Unable to generate an AI image." });
   }
 });
 
@@ -241,25 +310,37 @@ Route.get("/cron", async (req, res) => {
       length: "long",
       avoidTitles: recentPosts.map((item) => item.title),
     });
+    let generatedImage = null;
+    try {
+      generatedImage = await generateCloudflareImage(
+        "Create a high-quality, realistic, editorial food and nutrition photograph for a health blog article titled: " + article.title +
+        ". Natural lighting, appetizing but realistic food, clean composition, no text, no logos, landscape framing."
+      );
+    } catch {
+      // Continue to Pexels and the reusable image library if AI image generation is unavailable.
+    }
+
     let featuredPhoto = null;
-    if (process.env.PEXELS_API_KEY) {
+    if (!generatedImage && process.env.PEXELS_API_KEY) {
       try {
-        const photos = await findPexelsPhotos(`${article.title} healthy food nutrition`);
+        const photos = await findPexelsPhotos(article.title + " healthy food nutrition");
         featuredPhoto = photos[0] || null;
       } catch {
-        // Image search is optional; scheduled article creation should still succeed.
+        // Image search is optional; article creation must still succeed.
       }
     }
+    const reusedImage = generatedImage || featuredPhoto ? null : await getReusablePostImage();
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
-      image: featuredPhoto?.image || process.env.DEFAULT_ARTICLE_IMAGE_URL || "/images/nutriblog-default.svg",
+      image: generatedImage || featuredPhoto?.image || reusedImage?.image || process.env.DEFAULT_ARTICLE_IMAGE_URL || "/images/nutriblog-default.svg",
+      imageSource: generatedImage ? "ai" : featuredPhoto ? "pexels" : reusedImage ? "reused" : "default",
       imageCredit: featuredPhoto ? {
         provider: "Pexels",
         photographer: featuredPhoto.photographer,
         photographerUrl: featuredPhoto.photographerUrl,
         photoUrl: featuredPhoto.photoUrl,
-      } : undefined,
+      } : reusedImage?.imageCredit || undefined,
       status: settings.autoPublish ? "published" : "draft",
       generatedByAI: true,
     });
