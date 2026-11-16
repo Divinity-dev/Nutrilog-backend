@@ -24,6 +24,7 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
     const post = new Post({
       title,
       image: req.body.image || "",
+      imageCredit: req.body.imageCredit || undefined,
       desc: req.body.desc || "",
       categories: Array.isArray(req.body.categories) ? req.body.categories : [],
       content: Array.isArray(req.body.content) ? req.body.content : [],
@@ -89,6 +90,7 @@ Route.put("/:slug", authenticate, requireAdmin, async (req, res) => {
     const updates = {
       title: req.body.title,
       image: req.body.image,
+      imageCredit: req.body.imageCredit,
       desc: req.body.desc,
       categories: req.body.categories,
       content: req.body.content,
