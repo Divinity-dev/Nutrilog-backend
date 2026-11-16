@@ -244,7 +244,7 @@ Route.get("/cron", async (req, res) => {
     const post = await Post.create({
       ...article,
       slug: await uniqueSlug(article.title),
-      image: featuredPhoto?.image || "",
+      image: featuredPhoto?.image || process.env.DEFAULT_ARTICLE_IMAGE_URL || "/images/nutriblog-default.svg",
       imageCredit: featuredPhoto ? {
         provider: "Pexels",
         photographer: featuredPhoto.photographer,
