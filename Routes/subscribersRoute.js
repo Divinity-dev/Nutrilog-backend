@@ -97,13 +97,14 @@ Route.post("/unsubscribe/:id", async (req, res) => {
 Route.get("/subscribers", authenticate, requireAdmin, async (_req, res) => {
   try {
     const subscribers = await Subscriber.find().select("email status source createdAt confirmedAt unsubscribedAt").sort({ createdAt: -1 }).lean();
-    const normalized = subscribers.map((item) => ({ ...item, status: item.status || "active" }));
+    const normalized = subscribers.map((item) => ({ ...item, status: item.status || "review_required" }));
     return res.status(200).json({
       subscribers: normalized,
       total: normalized.length,
       activeCount: normalized.filter((item) => item.status === "active").length,
       pendingCount: normalized.filter((item) => item.status === "pending").length,
       unsubscribedCount: normalized.filter((item) => item.status === "unsubscribed").length,
+      reviewCount: normalized.filter((item) => item.status === "review_required").length,
     });
   } catch {
     return res.status(500).json({ message: "Unable to retrieve subscribers." });
