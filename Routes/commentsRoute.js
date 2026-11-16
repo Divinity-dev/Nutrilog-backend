@@ -32,7 +32,7 @@ Route.get("/post/:postId", optionalAuthenticate, async (req, res) => {
     if (!postExists) return res.status(404).json({ message: "Article not found." });
     const comments = await Comment.find({ post: req.params.postId, status: "approved" })
       .sort({ createdAt: -1 }).limit(100).lean();
-    const viewerKey = req.user?.id ? `user:${req.user.id}` : null;
+    const viewerKey = req.user?.id ? `user:${req.user.id}` : `guest:${clientKey(req)}`;
     return res.status(200).json(comments.map((comment) => publicComment(comment, viewerKey)));
   } catch {
     return res.status(500).json({ message: "Unable to load comments." });
@@ -90,6 +90,11 @@ Route.post("/post/:postId", optionalAuthenticate, async (req, res) => {
     });
     active.push(now);
     recentSubmissions.set(key, active);
+    if (recentSubmissions.size > 5000) {
+      for (const [entryKey, timestamps] of recentSubmissions) {
+        if (!timestamps.length || now - timestamps[timestamps.length - 1] >= RATE_WINDOW_MS) recentSubmissions.delete(entryKey);
+      }
+    }
     return res.status(201).json({
       message: "Your comment has been published.",
       comment: publicComment(comment.toObject(), userId ? `user:${userId}` : null),
