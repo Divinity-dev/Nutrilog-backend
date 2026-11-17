@@ -46,11 +46,6 @@ Route.post("/create", authenticate, requireAdmin, async (req, res) => {
       slug,
     });
     const savedPost = await post.save();
-    try {
-      await notifyAdminOfPost(savedPost);
-    } catch (error) {
-      console.error("Admin article creation email failed:", error.message);
-    }
     if (savedPost.status === "published") {
       try {
         const notificationResult = await notifySubscribersOfPost(savedPost);
