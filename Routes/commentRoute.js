@@ -6,9 +6,9 @@ import { authenticate, requireAdmin } from "../middleware/auth.js";
 
 const Route = express.Router();
 const recentSubmissions = new Map();
-const EMAIL_PATTERN = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const cleanText = (value, maxLength) => String(value || "").replace(/<[^>]*>/g, "").replace(/[\\u0000-\\u001F\\u007F]/g, " ").trim().slice(0, maxLength);
+const cleanText = (value, maxLength) => String(value || "").replace(/<[^>]*>/g, "").replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, maxLength);
 
 Route.get("/post/:slug", async (req, res) => {
   try {
