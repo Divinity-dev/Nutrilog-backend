@@ -22,16 +22,16 @@ const notifyAdminOfPost = async (post) => {
 
   const title = escapeEmailHtml(post.title);
   const status = post.status === "published" ? "published" : "saved as a draft";
-  const origin = (process.env.FRONTEND_URL || "https://www.nutribloghub.com").split(",")[0].trim().replace(/\\/$/, "");
-  const articleUrl = post.status === "published" ? `${origin}/blog/${encodeURIComponent(post.slug)}` : "";
-  const linkHtml = articleUrl ? `<p><a href="${articleUrl}">View published article</a></p>` : "<p>Open your NutriBlogHub admin dashboard to review and publish this draft.</p>";
-  const linkText = articleUrl ? `\\nView article: ${articleUrl}` : "\\nReview this draft in your NutriBlogHub admin dashboard.";
+  const origin = (process.env.FRONTEND_URL || "https://www.nutribloghub.com").split(",")[0].trim().replace(/\/$/, "");
+  const articleUrl = post.status === "published" ? \`\${origin}/blog/\${encodeURIComponent(post.slug)}\` : "";
+  const linkHtml = articleUrl ? \`<p><a href="\${articleUrl}">View published article</a></p>\` : "<p>Open your NutriBlogHub admin dashboard to review and publish this draft.</p>";
+  const linkText = articleUrl ? \`\nView article: \${articleUrl}\` : "\nReview this draft in your NutriBlogHub admin dashboard.";
 
   await sendEmail({
     to: recipient,
-    subject: `New article created in NutriBlogHub: ${post.title}`,
-    text: `A new article has been ${status}: ${post.title}\\n\\n${post.desc || ""}${linkText}\\n\\nCreated with ${post.generatedByAI ? "AI assistance" : "the article editor"}.`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#222;max-width:600px;margin:auto"><p style="color:#15803d;font-weight:bold">NutriBlogHub</p><h2>New article created</h2><p><strong>${title}</strong> has been ${status}.</p><p>${escapeEmailHtml(post.desc || "")}</p><p>Created with ${post.generatedByAI ? "AI assistance" : "the article editor"}.</p>${linkHtml}</div>`,
+    subject: \`New article created in NutriBlogHub: \${post.title}\`,
+    text: \`A new article has been \${status}: \${post.title}\n\n\${post.desc || ""}\${linkText}\n\nCreated with \${post.generatedByAI ? "AI assistance" : "the article editor"}.\`,
+    html: \`<div style="font-family:Arial,sans-serif;line-height:1.6;color:#222;max-width:600px;margin:auto"><p style="color:#15803d;font-weight:bold">NutriBlogHub</p><h2>New article created</h2><p><strong>\${title}</strong> has been \${status}.</p><p>\${escapeEmailHtml(post.desc || "")}</p><p>Created with \${post.generatedByAI ? "AI assistance" : "the article editor"}.</p>\${linkHtml}</div>\`,
   });
 };
 
