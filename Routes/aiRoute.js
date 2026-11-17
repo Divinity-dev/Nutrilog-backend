@@ -351,7 +351,12 @@ Route.get("/cron", async (req, res) => {
     });
 
     if (post.status === "published") {
-      notifySubscribersOfPost(post).catch((error) => console.error("Subscriber notification failed:", error.message));
+      try {
+        const notificationResult = await notifySubscribersOfPost(post);
+        console.info("Subscriber notifications completed:", { postId: post._id, ...notificationResult });
+      } catch (error) {
+        console.error("Subscriber notification failed:", error.message);
+      }
     }
 
     const notify = process.env.AI_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
